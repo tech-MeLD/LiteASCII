@@ -78,6 +78,8 @@ if (Test-Path node_modules\.vite) { Remove-Item -Recurse -Force node_modules\.vi
 
 ```
 LiteASCII/
+├── api/
+│   └── github-repo.js    # Vercel Serverless Function（GitHub API 代理）
 ├── src/
 │   ├── components/        # 组件
 │   │   ├── ascii/         # ASCII 动画组件
@@ -99,6 +101,7 @@ LiteASCII/
 ├── public/                # 静态资源
 ├── astro.config.mjs       # Astro 配置
 ├── tailwind.config.mjs    # Tailwind 配置
+├── vercel.json            # Vercel 部署配置
 └── package.json
 ```
 
@@ -191,18 +194,36 @@ import Animation from '../ascii/WebGLASCII_color.svelte';
 
 ## 🌐 部署
 
+### 环境变量
+
+项目使用 `GITHUB_TOKEN` 环境变量访问 GitHub API，用于展示 About 页面的仓库信息卡片：
+
+| 变量名 | 必需 | 说明 |
+|--------|------|------|
+| `GITHUB_TOKEN` | 推荐 | GitHub Personal Access Token，避免 API 速率限制（无 Token: 60次/小时, 有 Token: 5000次/小时） |
+
+> 在 Vercel 部署时，需在 Dashboard → Settings → Environment Variables 中添加 `GITHUB_TOKEN`。
+
+### 数据更新机制
+
+About 页面的 GitHub 仓库信息通过 **双层架构** 实现近实时更新：
+
+1. **构建时**：`about.astro` 服务端获取数据嵌入静态 HTML（SEO + 首屏展示）
+2. **运行时**：`api/github-repo.js`（Vercel Serverless Function）作为 API 代理，携带 Token 鉴权，CDN 缓存 5 分钟
+3. **客户端**：`GithubCard.svelte` 每 30 秒轮询 `/api/github-repo` 获取最新数据
+
 ### 静态部署
 
 构建输出在 `dist/` 目录，可部署到任意静态托管服务：
 
-.env：GITHUB_TOKEN=""
-
 配置文件：config.ts
 
-* [Vercel](https://vercel.com)
+* [Vercel](https://vercel.com)（推荐，支持 API 函数）
 * [Netlify](https://netlify.com)
 * [GitHub Pages](https://pages.github.com)
 * [Cloudflare Pages](https://pages.cloudflare.com)
+
+> 注意：`api/github-repo.js` 仅 Vercel 支持。部署到其他平台时，GithubCard 将仅使用构建时数据作为静态展示。
 
 ### 阿里云 ESA
 

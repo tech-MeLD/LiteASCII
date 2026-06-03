@@ -92,6 +92,8 @@ if (Test-Path node_modules\.vite) { Remove-Item -Recurse -Force node_modules\.vi
 
 ```
 LiteASCII/
+├── api/
+│   └── github-repo.js    # Vercel Serverless Function (GitHub API proxy)
 ├── src/
 │   ├── components/        # Components
 │   │   ├── ascii/         # ASCII animation components
@@ -113,6 +115,7 @@ LiteASCII/
 ├── public/                # Static assets
 ├── astro.config.mjs       # Astro configuration
 ├── tailwind.config.mjs    # Tailwind configuration
+├── vercel.json            # Vercel deployment config
 └── package.json
 ```
 
@@ -225,18 +228,36 @@ import Animation from '../ascii/WebGLASCII_color.svelte';
 
 ## 🌐 Deployment
 
+### Environment Variables
+
+The project uses `GITHUB_TOKEN` to access the GitHub API for the repository info card on the About page:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | Recommended | GitHub Personal Access Token, avoids API rate limits (without: 60 req/hr, with: 5000 req/hr) |
+
+> When deploying to Vercel, add `GITHUB_TOKEN` in Dashboard → Settings → Environment Variables.
+
+### Data Update Mechanism
+
+The GitHub repository info on the About page uses a **dual-layer architecture** for near real-time updates:
+
+1. **Build-time**: `about.astro` fetches data server-side and embeds it in static HTML (SEO + first paint)
+2. **Runtime**: `api/github-repo.js` (Vercel Serverless Function) acts as an API proxy with Token auth, CDN cached for 5 minutes
+3. **Client-side**: `GithubCard.svelte` polls `/api/github-repo` every 30 seconds for the latest data
+
 ### Static Hosting
 
 The build output in `dist/` can be deployed to any static hosting provider:
 
-.env：GITHUB_TOKEN=""
+Config file: `config.ts`
 
-Config file：config.ts
-
-* [Vercel](https://vercel.com)
+* [Vercel](https://vercel.com) (recommended, supports API functions)
 * [Netlify](https://netlify.com)
 * [GitHub Pages](https://pages.github.com)
 * [Cloudflare Pages](https://pages.cloudflare.com)
+
+> Note: `api/github-repo.js` is only supported on Vercel. When deploying to other platforms, the GithubCard will display build-time data as a static snapshot.
 
 ### Alibaba Cloud ESA
 

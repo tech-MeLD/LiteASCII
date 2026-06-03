@@ -1,29 +1,46 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
 
-  // 1. 接收 Astro 传过来的初始数据（构建时的快照）
+  // 1. 接收 Astro 传过来的初始数据（构建时的快照，作为首屏展示）
   let { repoData: initialData } = $props();
 
   // 2. 将传入的静态数据转化为 Svelte 5 的响应式状态
   let repo = $state(initialData);
 
-  // 3. 客户端挂载时，静默获取最新数据
-  onMount(async () => {
-    // 如果没有完整的仓库名（例如 username/repo），则不执行
+  // 定时轮询 ID
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  // 3. 从内部 API 代理获取最新 GitHub 数据
+  async function refreshRepoData() {
     if (!repo || !repo.full_name) return;
 
     try {
-      // 客户端直接发起匿名请求（无 Token）。
-      // GitHub 允许单个 IP 每小时 60 次的公共 API 请求，对前端展示完全够用。
-      const res = await fetch(`https://api.github.com/repos/${repo.full_name}`);
+      // 调用 Vercel Serverless Function 代理，服务端持有 GITHUB_TOKEN
+      // 享受 5000 req/hr 高速率 + CDN 缓存，比直接调 GitHub API 更可靠
+      const res = await fetch('/api/github-repo', {
+        headers: { 'User-Agent': 'LiteASCII-Client' },
+      });
       if (res.ok) {
         const freshData = await res.json();
-        // 4. 获取成功后，更新本地状态，视图会自动刷新 Star 数
         repo = freshData;
       }
     } catch (error) {
-      console.error("静默更新 GitHub 数据失败:", error);
-      // 即使失败，页面依然显示构建时的初始数据，不会崩溃
+      console.error('刷新 GitHub 数据失败:', error);
+      // 失败时保持当前数据不变，页面不会崩溃
+    }
+  }
+
+  // 4. 挂载时立即获取一次 + 每 30 秒轮询一次
+  onMount(() => {
+    refreshRepoData();
+    pollTimer = setInterval(refreshRepoData, 30_000);
+  });
+
+  // 5. 组件卸载时清除定时器，避免内存泄漏
+  onDestroy(() => {
+    if (pollTimer !== null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
     }
   });
 </script>
