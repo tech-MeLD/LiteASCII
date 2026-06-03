@@ -18,13 +18,12 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const REPO_PATH = `${GITHUB_USERNAME}/${GITHUB_REPO}`;
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_PATH}`;
 
-export default async function handler(request) {
+// Vercel Node.js runtime: 默认导出签名为 (req, res) => void
+export default async function handler(req, res) {
   // 限制请求方法
-  if (request.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
   const fetchHeaders = {
@@ -44,22 +43,15 @@ export default async function handler(request) {
       console.error(
         `[github-repo] GitHub API error ${ghRes.status}: ${errData.message || ghRes.statusText}`,
       );
-      return new Response(
-        JSON.stringify({
-          error: 'GitHub API unavailable',
-          status: ghRes.status,
-          message: errData.message || ghRes.statusText,
-        }),
-        {
-          status: 502,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            // 错误时缓存较短时间，避免长时间返回错误
-            'Cache-Control': 'public, s-maxage=60',
-          },
-        },
-      );
+
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, s-maxage=60');
+      res.status(502).json({
+        error: 'GitHub API unavailable',
+        status: ghRes.status,
+        message: errData.message || ghRes.statusText,
+      });
+      return;
     }
 
     const data = await ghRes.json();
@@ -77,27 +69,14 @@ export default async function handler(request) {
       updated_at: data.updated_at,
     };
 
-    return new Response(JSON.stringify(filtered), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        // CDN 缓存 5 分钟，过期后 60 秒内仍返回旧数据并后台刷新
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
-      },
-    });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+    res.status(200).json(filtered);
   } catch (err) {
     console.error('[github-repo] fetch failed:', err.message);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error', message: err.message }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'public, s-maxage=30',
-        },
-      },
-    );
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, s-maxage=30');
+    res.status(500).json({ error: 'Internal server error', message: err.message });
   }
 }
