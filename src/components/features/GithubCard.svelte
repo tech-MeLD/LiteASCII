@@ -15,11 +15,15 @@
     if (!repo || !repo.full_name) return;
 
     try {
-      // 调用 Vercel Serverless Function 代理，服务端持有 GITHUB_TOKEN
-      // 享受 5000 req/hr 高速率 + CDN 缓存，比直接调 GitHub API 更可靠
+      // no-store 禁止浏览器缓存，避免 CDN 返回 304（无 body）导致 JSON 解析失败
       const res = await fetch('/api/github-repo', {
         headers: { 'User-Agent': 'LiteASCII-Client' },
+        cache: 'no-store',
       });
+
+      // 304 Not Modified 说明 CDN 认为数据未变，无需更新
+      if (res.status === 304) return;
+
       if (res.ok) {
         const freshData = await res.json();
         repo = freshData;
