@@ -12,7 +12,7 @@
 
 ### 1. 🎬 **ASCII 动画**
 
-支持 TypeWriter 打字动画和 WebGL ASCII 视频动画渲染
+支持 TypeWriter 打字动画和 WebGL ASCII 视频动画渲染 
 
 ![ASCII 动画1](public/gif/TypeWriter.gif)
 ![ASCII 动画2](public/gif/ascii.gif)
@@ -198,8 +198,8 @@ import Animation from '../ascii/WebGLASCII_color.svelte';
 
 项目使用 `GITHUB_TOKEN` 环境变量访问 GitHub API，用于展示 About 页面的仓库信息卡片：
 
-| 变量名 | 必需 | 说明 |
-|--------|------|------|
+| 变量名           | 必需 | 说明                                                                                          |
+| ---------------- | ---- | --------------------------------------------------------------------------------------------- |
 | `GITHUB_TOKEN` | 推荐 | GitHub Personal Access Token，避免 API 速率限制（无 Token: 60次/小时, 有 Token: 5000次/小时） |
 
 > 在 Vercel 部署时，需在 Dashboard → Settings → Environment Variables 中添加 `GITHUB_TOKEN`。
