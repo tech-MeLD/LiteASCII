@@ -7,7 +7,7 @@
    *   import Animation from './ascii/WebGLASCII_color.svelte';   ← WebGL ascii color
    */
 
-  import Animation from '../ascii/WebGLASCII_color.svelte';
+  import Animation from '../ascii/TypeWriter.svelte';
 
   interface Props {
     /** 笔记数量 */
